@@ -7,12 +7,21 @@ let slider = 0
 let best_bird_data;
 let reset = true;
 let mBird;
+let score = 0;
+let maxScore = 0;
+
+function showScores() {
+  textSize(32);
+  fill(255, 150, 255);
+  text('score: ' + score, 1, 32);
+  text('record: ' + maxScore, 1, 64);
+}
 
 function keyPressed() {
 
   if (key == ' ') {
 
-    if (birds.length === 1) {
+    if (birds.length <= 3) {
       console.log('SAVE BEST BIRD');
       let best_bird = birds[0];
       best_bird_data = best_bird.brain.serialize();
@@ -26,10 +35,15 @@ function keyPressed() {
   }
 
   if (key == 'B') {
-    console.log('BEST BIRD');
-    let bird_obj = NeuralNetwork.deserialize(best_bird_data);
-    mBird = new Bird(bird_obj);
-    reset = false;
+    if (best_bird_data) {
+      console.log('BEST BIRD');
+      let bird_obj = NeuralNetwork.deserialize(best_bird_data);
+      mBird = new Bird(bird_obj);
+      reset = false;
+      score = 0;
+    } else {
+      console.log('[Training in progress !]');
+    }
   }
 
   if (key == 'R') {
@@ -66,11 +80,17 @@ function draw() {
       for (var i = pipes.length - 1; i >= 0; i--) {
         pipes[i].show();
         pipes[i].update();
-
         for (let j = birds.length - 1; j >= 0; j--) {
+
+          if (pipes[i].pass(birds[j])) {
+            score++;
+          }
           if (birds[j].x >= pipes[i].x) {
             if (pipes[i].hits(birds[j])) {
               saved_birds.push(birds.splice(j, 1)[0]);
+
+              maxScore = max(score, maxScore);
+              score = 0;
             }
           }
         }
@@ -91,21 +111,26 @@ function draw() {
         pipes = [];
       }
     } else {
-
       if (counter % 75 == 0) {
         pipes.push(new Pipe());
       }
       counter++;
       for (var i = pipes.length - 1; i >= 0; i--) {
-        pipes[i].show();
-        pipes[i].update();
-        if (mBird.x >= pipes[i].x) {
-          if (pipes[i].hits(mBird)) {
-            resetGame();
-          }
-        }
+
         if (pipes[i].offscreen()) {
           pipes.splice(i, 1)
+        }
+        pipes[i].show();
+        pipes[i].update();
+        if (pipes[i].pass(mBird)) {
+          score++;
+        }
+        if (mBird.x >= pipes[i].x) {
+          if (pipes[i].hits(mBird)) {
+            maxScore = max(score, maxScore);
+            score = 0;
+            resetGame();
+          }
         }
       }
       mBird.think(pipes);
@@ -137,4 +162,5 @@ function draw() {
       pipe.show();
     }
   }
+  showScores();
 }
